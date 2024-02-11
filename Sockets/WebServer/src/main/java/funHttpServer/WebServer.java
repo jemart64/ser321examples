@@ -246,6 +246,95 @@ class WebServer {
           // TODO: Parse the JSON returned by your fetch and create an appropriate
           // response based on what the assignment document asks for
 
+        } else if (request.contains("multiPrint?")) {
+            Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+            query_pairs = splitQuery(request.replace("multiPrint?", ""));
+
+            String text = query_pairs.get("text");
+            Integer iterations = null;
+
+            try {
+                iterations = Integer.parseInt(query_pairs.get("iter"));
+                if (text.isEmpty() || text == null || iterations == null) {
+                    builder.append("HTTP/1.1 400 Bad Request\n");
+                    builder.append("Content-Type: text/html; charset=utf-8\n");
+                    builder.append("\n");
+                    builder.append("Missing 'text' or 'iter' inputs");
+                }
+                else if (text.length() > 250) {
+                    builder.append("HTTP/1.1 400 Bad Request\n");
+                    builder.append("Content-Type: text/html; charset=utf-8\n");
+                    builder.append("\n");
+                    builder.append("Input for 'text' is too long. (250 character max)");
+                }
+                else if (iterations > 100) {
+                    builder.append("HTTP/1.1 400 Bad Request\n");
+                    builder.append("Content-Type: text/html; charset=utf-8\n");
+                    builder.append("\n");
+                    builder.append("Input for 'iter' is too large. (100 max)");
+                }
+                else {
+                    builder.append("HTTP/1.1 200 OK\n");
+                    builder.append("Content-Type: text/html; charset=utf-8\n");
+                    builder.append("\n");
+                    for (int i = 0; i < iterations; i++) {
+                      builder.append(text).append("<br>");
+                    }
+                }
+            }
+            catch (NumberFormatException e) {
+                builder.append("HTTP/1.1 400 Bad Request\n");
+                builder.append("Content-Type: text/html; charset=utf-8\n");
+                builder.append("\n");
+                builder.append("Invalid input for 'iter'. Please enter a number.");
+            }
+        } else if (request.contains("pyramid?")) {
+                Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+                query_pairs = splitQuery(request.replace("pyramid?", ""));
+
+                String character = query_pairs.get("char");
+                Integer base = null;
+                try {
+                     base = Integer.parseInt(query_pairs.get("base"));
+   
+                     if (character.isEmpty() || character == null || base == null) {
+                         builder.append("HTTP/1.1 400 Bad Request\n");
+                         builder.append("Content-Type: text/html; charset=utf-8\n");
+                         builder.append("\n");
+                         builder.append("Missing 'char' or 'base' inputs");
+                     }
+                     else if (character.length() != 1) {
+                         builder.append("HTTP/1.1 400 Bad Request\n");
+                         builder.append("Content-Type: text/html; charset=utf-8\n");
+                         builder.append("\n");
+                         builder.append("'char' input should be a single character");
+                     }
+                     else if (base > 150) {
+                         builder.append("HTTP/1.1 400 Bad Request\n");
+                         builder.append("Content-Type: text/html; charset=utf-8\n");
+                         builder.append("\n");
+                         builder.append("Input for 'base' is too large. (150 max)");
+                     }
+                     else {
+                          builder.append("HTTP/1.1 200 OK\n");
+                          builder.append("Content-Type: text/html; charset=utf-8\n");
+                          builder.append("\n");
+                          for (int i = 1; i <= base; i++) {
+                                  for (int j = 0; j < base - i; j++) {
+                                          builder.append("&nbsp;");
+                                  }
+                                  for (int k = 0; k < 2 * i - 1; k++) {
+                                          builder.append(character);
+                                  }
+                                  builder.append("<br>");
+                              }
+                     }
+                 } catch (NumberFormatException e) {
+                        builder.append("HTTP/1.1 400 Bad Request\n");
+                        builder.append("Content-Type: text/html; charset=utf-8\n");
+                        builder.append("\n");
+                        builder.append("Invalid input for 'base'. Please enter a number.");
+                } 
         } else {
           // if the request is not recognized at all
 
