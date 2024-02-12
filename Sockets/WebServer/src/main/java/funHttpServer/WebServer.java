@@ -236,69 +236,15 @@ class WebServer {
 
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
           query_pairs = splitQuery(request.replace("github?", ""));
-         
-          // TODO: Parse the JSON returned by your fetch and create an appropriate
-          // response based on what the assignment document asks for       
-          String json = "";
-          try {
-	          json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
-	          System.out.println(json);
-	             
-          }
-          catch (Exception ex) {
-        	   builder.append("HTTP/1.1 500 Internal Server Error\n");
-              builder.append("Content-Type: text/html; charset=utf-8\n");
-              builder.append("\n");
-              builder.append("Failed to fetch GitHub API URL.");
-          }
+          String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
+          System.out.println(json);
 
-          if (query_pairs.get("query") == null || query_pairs.get("query").isEmpty()) {
-        	  builder.append("HTTP/1.1 400 Bad Request\n");
-              builder.append("Content-Type: text/html; charset=utf-8\n");
-              builder.append("\n");
-              builder.append("Missing input for query.");
-          }
-          
-          if(json.contains("\"message\": \"Not Found\"")) {
-        	  builder.append("HTTP/1.1 400 Bad Request\n");
-              builder.append("Content-Type: text/html; charset=utf-8\n");
-              builder.append("\n");
-              builder.append("Not a valid GitHub API query.");
-          }
-          else {
-            //Parse JSON. Obtains key name followed by key value.
-            String[] key = json.split("[{},\":]+");
-   
-            String repoName = null;
-            String repoID = null;
-            String ownerLogin = null;
-   
-            builder.append("HTTP/1.1 200 OK\n");
-            builder.append("Content-Type: text/html; charset=utf-8\n");
-            builder.append("\n");
-             for (int i = 0; i < key.length; i++) {
-                 if ("id".equals(key[i])) {
-                    repoID = key[i + 1];
-                 } 
-                 else if ("full_name".equals(key[i])) {
-                     repoName = key[i + 1];
-                 } 
-                 else if ("login".equals(key[i])) {
-                     ownerLogin = key[i + 1];
-                 }
-      
-                 if (repoID != null && repoName != null && ownerLogin != null) {
-                     builder.append("Full Name: ").append(repoName).append("<br>");
-                     builder.append("ID: ").append(repoID).append("<br>");
-                     builder.append("Owner Login: ").append(ownerLogin).append("<br>");
-                     builder.append("<br>");
-                 }
-                 
-                  repoName = null;
-                  repoID = null;
-                  ownerLogin = null;
-             }
-          }
+          builder.append("HTTP/1.1 200 OK\n");
+          builder.append("Content-Type: text/html; charset=utf-8\n");
+          builder.append("\n");
+          builder.append("Check the todos mentioned in the Java source file");
+          // TODO: Parse the JSON returned by your fetch and create an appropriate
+          // response based on what the assignment document asks for
         } else if (request.contains("multiPrint?")) {
             Map<String, String> query_pairs = new LinkedHashMap<String, String>();
             query_pairs = splitQuery(request.replace("multiPrint?", ""));
