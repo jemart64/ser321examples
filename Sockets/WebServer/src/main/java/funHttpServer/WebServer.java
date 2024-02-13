@@ -201,30 +201,47 @@ class WebServer {
           // extract path parameters
           query_pairs = splitQuery(request.replace("multiply?", ""));
 
+          boolean correctKeys = false;
           try {
-    		  // extract required fields from parameters
-              Integer num1 = Integer.parseInt(query_pairs.get("num1"));
-              Integer num2 = Integer.parseInt(query_pairs.get("num2"));
-    		  
-        	  // do math
-              Integer result = num1 * num2;
-              
-              // Generate response
-              builder.append("HTTP/1.1 200 OK\n");
-              builder.append("Content-Type: text/html; charset=utf-8\n");
-              builder.append("\n");
-              builder.append("Result is: " + result);
+	          if (!query_pairs.containsKey("num1") || !query_pairs.containsKey("num2")) {
+	        	  throw new IllegalArgumentException("Missing 'num1' or 'num2' parameters");
+	          }	 
+	          else {
+	        	  correctKeys = true;
+	          }
           }
           // TODO: Include error handling here with a correct error code and
-          // a response that makes sense
-          catch (Exception e) { 
-      		// Generate response
-                builder.append("HTTP/1.1 400 Bad Request\n");
-                builder.append("Content-Type: text/html; charset=utf-8\n");
-                builder.append("\n");
-                builder.append("Invalid input. Please provide valid inputs for num1 and num2.");
-      	  }
-
+	      // a response that makes sense
+          catch (IllegalArgumentException e) {
+  	        // Handle missing parameters
+  	        builder.append("HTTP/1.1 400 Bad Request\n");
+  	        builder.append("Content-Type: text/html; charset=utf-8\n");
+  	        builder.append("\n");
+  	        builder.append(e.getMessage());
+  	      }
+          if (correctKeys == true) {
+		      try {
+		    		  // extract required fields from parameters
+		              Integer num1 = Integer.parseInt(query_pairs.get("num1"));
+		              Integer num2 = Integer.parseInt(query_pairs.get("num2"));
+		    		  
+		        	  // do math
+		              Integer result = num1 * num2;
+		              
+		              // Generate response
+		              builder.append("HTTP/1.1 200 OK\n");
+		              builder.append("Content-Type: text/html; charset=utf-8\n");
+		              builder.append("\n");
+		              builder.append("Result is: " + result);
+		          }
+		          catch (Exception e) { 
+		      		// Generate response
+		                builder.append("HTTP/1.1 400 Bad Request\n");
+		                builder.append("Content-Type: text/html; charset=utf-8\n");
+		                builder.append("\n");
+		                builder.append("Invalid input. Please provide valid inputs for num1 and num2.");
+		      	  }
+          }
         } else if (request.contains("github?")) {
           // pulls the query from the request and runs it with GitHub's REST API
           // check out https://docs.github.com/rest/reference/
@@ -236,159 +253,222 @@ class WebServer {
 
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
           query_pairs = splitQuery(request.replace("github?", ""));
-             
+          String json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
+          System.out.println(json);
+           
           // TODO: Parse the JSON returned by your fetch and create an appropriate
           // response based on what the assignment document asks for
 
-         String json = "";
+          boolean correctKey = false;
           try {
-                  json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
-                  System.out.println(json);
-
+	          if (query_pairs.containsKey("query")) {
+	        	  correctKey = true;
+	          }	 
+	          else {
+	        	  throw new IllegalArgumentException("Missing 'query' parameters");
+	          }
           }
-          catch (Exception ex) {
-                   builder.append("HTTP/1.1 500 Internal Server Error\n");
-              builder.append("Content-Type: text/html; charset=utf-8\n");
-              builder.append("\n");
-              builder.append("Failed to fetch GitHub API URL.");
+          catch (IllegalArgumentException e) {
+  	        // Handle missing parameters
+  	        builder.append("HTTP/1.1 400 Bad Request\n");
+  	        builder.append("Content-Type: text/html; charset=utf-8\n");
+  	        builder.append("\n");
+  	        builder.append(e.getMessage());
+  	      }
+          if (correctKey == true) {
+	          String json = "";
+	          try {
+		          json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
+		          System.out.println(json);
+	
+	          }
+	          catch (Exception ex) {
+	        	   builder.append("HTTP/1.1 500 Internal Server Error\n");
+	              builder.append("Content-Type: text/html; charset=utf-8\n");
+	              builder.append("\n");
+	              builder.append("Failed to fetch GitHub API URL.");
+	          }
+	          
+	          if (query_pairs.get("query") == null || query_pairs.get("query").isEmpty()) {
+	        	  builder.append("HTTP/1.1 400 Bad Request\n");
+	              builder.append("Content-Type: text/html; charset=utf-8\n");
+	              builder.append("\n");
+	              builder.append("Missing input for query.");
+	          }     
+	          else {
+		          //Parse JSON. Gets key names then key value.
+		          String[] key = json.split("[{},\":]+");
+		          String repoID = null;
+		          String repoName = null;
+		          String ownerLogin = null;
+		          boolean found = false;
+		
+		          builder.append("HTTP/1.1 200 OK\n");
+		          builder.append("Content-Type: text/html; charset=utf-8\n");
+		          builder.append("\n");
+		          for (int i = 0; i < key.length; i++) {
+		              if ("id".equals(key[i])) {
+		                  repoID = key[i + 1];
+		              } else if ("full_name".equals(key[i])) {
+		                  repoName = key[i + 1];
+		              } else if ("login".equals(key[i]) && "owner".equals(key[i - 1])) {
+		                  ownerLogin = key[i + 1];
+		              }
+		
+		              if (repoID != null && repoName != null && ownerLogin != null) {
+		            	  builder.append("Full Name: ").append(repoName).append("<br>");
+		                  builder.append("ID: ").append(repoID).append("<br>");
+		                  builder.append("Owner Login: ").append(ownerLogin).append("<br>");
+		                  builder.append("<br>");
+		                  
+		                  repoID = null;
+		                  repoName = null;
+		                  ownerLogin = null;
+		                  
+		                  if (found == false) {
+		                	  found = true;
+		                  }
+		              }
+		          }
+		          
+		          if (found == false) {
+		        	  builder.append("Query does not include mentioned information.");
+		          }
+                
+	          }
           }
-
-          if (query_pairs.get("query") == null || query_pairs.get("query").isEmpty()) {
-                  builder.append("HTTP/1.1 400 Bad Request\n");
-              builder.append("Content-Type: text/html; charset=utf-8\n");
-              builder.append("\n");
-              builder.append("Missing input for query.");
-          }
-          else {
-                  //Parse JSON. Gets key names then key value.
-                  String[] key = json.split("[{},\":]+");
-                  String repoID = null;
-                  String repoName = null;
-                  String ownerLogin = null;
-                  boolean found = false;
-
-                  builder.append("HTTP/1.1 200 OK\n");
-                  builder.append("Content-Type: text/html; charset=utf-8\n");
-                  builder.append("\n");
-                  for (int i = 0; i < key.length; i++) {
-                      if ("id".equals(key[i])) {
-                          repoID = key[i + 1];
-                      } else if ("full_name".equals(key[i])) {
-                          repoName = key[i + 1];
-                      } else if ("login".equals(key[i]) && "owner".equals(key[i - 1])) {
-                          ownerLogin = key[i + 1];
-                      }
-
-                      if (repoID != null && repoName != null && ownerLogin != null) {
-                          builder.append("Full Name: ").append(repoName).append("<br>");
-                          builder.append("ID: ").append(repoID).append("<br>");
-                          builder.append("Owner Login: ").append(ownerLogin).append("<br>");
-                          builder.append("<br>");
-
-                          repoID = null;
-                          repoName = null;
-                          ownerLogin = null;
-
-                          if (found == false) {
-                                  found = true;
-                          }
-                      }
-                  }
-
-                  if (found == false) {
-                          builder.append("Query does not include mentioned information.");
-                  }
-           }
         } else if (request.contains("multiPrint?")) {
-            Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+        	Map<String, String> query_pairs = new LinkedHashMap<String, String>();
             query_pairs = splitQuery(request.replace("multiPrint?", ""));
-
-            String text = query_pairs.get("text");
-            Integer iterations = null;
-
+            
+            boolean correctKeys = false;
             try {
-                iterations = Integer.parseInt(query_pairs.get("iter"));
-                if (text.isEmpty() || text == null || iterations == null) {
-                    builder.append("HTTP/1.1 400 Bad Request\n");
-                    builder.append("Content-Type: text/html; charset=utf-8\n");
-                    builder.append("\n");
-                    builder.append("Missing 'text' or 'iter' inputs");
-                }
-                else if (text.length() > 250) {
-                    builder.append("HTTP/1.1 400 Bad Request\n");
-                    builder.append("Content-Type: text/html; charset=utf-8\n");
-                    builder.append("\n");
-                    builder.append("Input for 'text' is too long. (250 character max)");
-                }
-                else if (iterations > 100) {
-                    builder.append("HTTP/1.1 400 Bad Request\n");
-                    builder.append("Content-Type: text/html; charset=utf-8\n");
-                    builder.append("\n");
-                    builder.append("Input for 'iter' is too large. (100 max)");
-                }
-                else {
-                    builder.append("HTTP/1.1 200 OK\n");
-                    builder.append("Content-Type: text/html; charset=utf-8\n");
-                    builder.append("\n");
-                    for (int i = 0; i < iterations; i++) {
-                      builder.append(text).append("<br>");
-                    }
-                }
+  	          if (!query_pairs.containsKey("text") || !query_pairs.containsKey("iter")) {
+  	        	  throw new IllegalArgumentException("Missing 'text' or 'iter' parameters.");
+  	          }	 
+  	          else {
+  	        	  correctKeys = true;
+  	          }
             }
-            catch (NumberFormatException e) {
-                builder.append("HTTP/1.1 400 Bad Request\n");
-                builder.append("Content-Type: text/html; charset=utf-8\n");
-                builder.append("\n");
-                builder.append("Invalid input for 'iter'. Please enter a number.");
+            catch (IllegalArgumentException e) {
+    	        // Handle missing parameters
+    	        builder.append("HTTP/1.1 400 Bad Request\n");
+    	        builder.append("Content-Type: text/html; charset=utf-8\n");
+    	        builder.append("\n");
+    	        builder.append(e.getMessage());
+    	      }
+            if (correctKeys == true) {
+	            String text = query_pairs.get("text");
+	            Integer iterations = null;
+	            
+	            try {
+	                iterations = Integer.parseInt(query_pairs.get("iter"));
+	                if (text.isEmpty() || text == null || iterations == null) {
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/html; charset=utf-8\n");
+	                    builder.append("\n");
+	                    builder.append("Missing 'text' or 'iter' inputs");
+	                }
+	                else if (text.length() > 250) {
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/html; charset=utf-8\n");
+	                    builder.append("\n");
+	                    builder.append("Input for 'text' is too long. (250 character max)");
+	                }
+	                else if (iterations > 100) {
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/html; charset=utf-8\n");
+	                    builder.append("\n");
+	                    builder.append("Input for 'iter' is too large. (100 max)");
+	                }
+	                else {
+	                    builder.append("HTTP/1.1 200 OK\n");
+	                    builder.append("Content-Type: text/html; charset=utf-8\n");
+	                    builder.append("\n");
+	                    for (int i = 0; i < iterations; i++) {
+	                      builder.append(text).append("<br>");
+	                    }
+	                }
+	            }
+	            catch (NumberFormatException e) {
+	                builder.append("HTTP/1.1 400 Bad Request\n");
+	                builder.append("Content-Type: text/html; charset=utf-8\n");
+	                builder.append("\n");
+	                builder.append("Invalid input for 'iter'. Please enter a number.");
+	            }
             }
-        } else if (request.contains("pyramid?")) {
-                Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-                query_pairs = splitQuery(request.replace("pyramid?", ""));
-
-                String character = query_pairs.get("char");
-                Integer base = null;
-                try {
-                     base = Integer.parseInt(query_pairs.get("base"));
-   
-                     if (character.isEmpty() || character == null || base == null) {
-                         builder.append("HTTP/1.1 400 Bad Request\n");
-                         builder.append("Content-Type: text/html; charset=utf-8\n");
-                         builder.append("\n");
-                         builder.append("Missing 'char' or 'base' inputs");
-                     }
-                     else if (character.length() != 1) {
-                         builder.append("HTTP/1.1 400 Bad Request\n");
-                         builder.append("Content-Type: text/html; charset=utf-8\n");
-                         builder.append("\n");
-                         builder.append("'char' input should be a single character");
-                     }
-                     else if (base > 150) {
-                         builder.append("HTTP/1.1 400 Bad Request\n");
-                         builder.append("Content-Type: text/html; charset=utf-8\n");
-                         builder.append("\n");
-                         builder.append("Input for 'base' is too large. (150 max)");
-                     }
-                     else {
-                          builder.append("HTTP/1.1 200 OK\n");
-                          builder.append("Content-Type: text/html; charset=utf-8\n");
-                          builder.append("\n");
-                          for (int i = 1; i <= base; i++) {
-                                  for (int j = 0; j < base - i; j++) {
-                                          builder.append("&nbsp;");
-                                  }
-                                  for (int k = 0; k < 2 * i - 1; k++) {
-                                          builder.append(character);
-                                  }
-                                  builder.append("<br>");
-                              }
-                     }
-                 } catch (NumberFormatException e) {
-                        builder.append("HTTP/1.1 400 Bad Request\n");
-                        builder.append("Content-Type: text/html; charset=utf-8\n");
-                        builder.append("\n");
-                        builder.append("Invalid input for 'base'. Please enter a number.");
-                } 
-        } else {
+        } else if (request.contains("pryamid?")) {
+        	Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+            query_pairs = splitQuery(request.replace("pyramid?", ""));
+            
+            boolean correctKeys = false;
+            try {
+  	          if (!query_pairs.containsKey("char") || !query_pairs.containsKey("base")) {
+  	        	  throw new IllegalArgumentException("Missing 'char' or 'base' parameters.");
+  	          }	 
+  	          else {
+  	        	  correctKeys = true;
+  	          }
+            }
+            catch (IllegalArgumentException e) {
+    	        // Handle missing parameters
+    	        builder.append("HTTP/1.1 400 Bad Request\n");
+    	        builder.append("Content-Type: text/html; charset=utf-8\n");
+    	        builder.append("\n");
+    	        builder.append(e.getMessage());
+    	      }
+            if (correctKeys == true) {
+	            String character = query_pairs.get("char");
+	            Integer base = null;
+	            try {
+	            	base = Integer.parseInt(query_pairs.get("base"));
+	            	if (character.isEmpty() || character == null || base == null) {
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/html; charset=utf-8\n");
+	                    builder.append("\n");
+	                    builder.append("Missing 'char' or 'base' inputs");
+	                }
+	            	else if (character.length() != 1) {
+	            		builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/html; charset=utf-8\n");
+	                    builder.append("\n");
+	                    builder.append("'char' input should be a signle character");
+	            	}
+	            	else if (base > 150) {
+	                    builder.append("HTTP/1.1 400 Bad Request\n");
+	                    builder.append("Content-Type: text/html; charset=utf-8\n");
+	                    builder.append("\n");
+	                    builder.append("Input for 'base' is too large. (150 max)");
+	                }
+	            	else {
+	            		builder.append("HTTP/1.1 200 OK\n");
+	            		builder.append("Content-Type: text/html; charset=utf-8\n");
+	            		builder.append("\n");
+	            		for (int i = 1; i <= base; i++) {
+	                        // Print spaces before the characters to center the pyramid
+	                        for (int j = 0; j < base - i; j++) {
+	                        	builder.append("&nbsp;");
+	                        }
+	
+	                        // Print the characters for each row
+	                        for (int k = 0; k < 2 * i - 1; k++) {
+	                        	builder.append(character);
+	                        }
+	
+	                        // Move to the next line for the next row
+	                        builder.append("<br>");
+	                    }
+	            	}
+	            	
+	            }
+	            catch (NumberFormatException e) {
+	                builder.append("HTTP/1.1 400 Bad Request\n");
+	                builder.append("Content-Type: text/html; charset=utf-8\n");
+	                builder.append("\n");
+	                builder.append("Invalid input for 'base'. Please enter a number.");
+	            }
+            }
+      	} else {
           // if the request is not recognized at all
 
           builder.append("HTTP/1.1 400 Bad Request\n");
