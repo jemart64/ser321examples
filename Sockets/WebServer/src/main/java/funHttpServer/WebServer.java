@@ -397,7 +397,7 @@ class WebServer {
 	                builder.append("Invalid input for 'iter'. Please enter a number.");
 	            }
             }
-        } else if (request.contains("pryamid?")) {
+        } else if (request.contains("pyramid?")) {
         	Map<String, String> query_pairs = new LinkedHashMap<String, String>();
             query_pairs = splitQuery(request.replace("pyramid?", ""));
             
