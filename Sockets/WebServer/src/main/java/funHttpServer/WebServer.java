@@ -276,7 +276,7 @@ class WebServer {
   	        builder.append(e.getMessage());
   	      }
           if (correctKey == true) {
-	          String json = "";
+	          json = "";
 	          try {
 		          json = fetchURL("https://api.github.com/" + query_pairs.get("query"));
 		          System.out.println(json);
