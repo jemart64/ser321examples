@@ -235,7 +235,7 @@ class WebServer {
           //     "/repos/OWNERNAME/REPONAME/contributors"
 
           Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-          query_pairs = splitQuery(request.replace("github?", ""))
+          query_pairs = splitQuery(request.replace("github?", ""));
              
           // TODO: Parse the JSON returned by your fetch and create an appropriate
           // response based on what the assignment document asks for
